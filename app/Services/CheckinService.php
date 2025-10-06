@@ -35,8 +35,14 @@ class CheckinService
         $max = 1024 * 1024 * 1024; // 1GB
         $traffic = rand($min, $max);
 
+        // 获取用户已用流量
+        $usedTraffic = $user->u + $user->d;
+        
+        // 计算新的总流量：确保不低于已用流量
+        $newTransferEnable = max($usedTraffic, $user->transfer_enable + $traffic);
+        
         // 更新用户流量
-        $user->transfer_enable += $traffic;
+        $user->transfer_enable = $newTransferEnable;
         $user->save();
 
         // 记录用户签到状态
@@ -100,8 +106,14 @@ class CheckinService
         // 生成随机流量 (-inputBytes 到 +inputBytes)
         $traffic = rand(-$inputBytes, $inputBytes);
 
+        // 获取用户已用流量
+        $usedTraffic = $user->u + $user->d;
+        
+        // 计算新的总流量：确保不低于已用流量
+        $newTransferEnable = max($usedTraffic, $user->transfer_enable + $traffic);
+        
         // 更新用户流量
-        $user->transfer_enable += $traffic;
+        $user->transfer_enable = $newTransferEnable;
         $user->save();
 
         // 记录用户签到状态
