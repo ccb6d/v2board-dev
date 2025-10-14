@@ -130,7 +130,8 @@ class ConfigController extends Controller
                 'server_push_interval' => config('v2board.server_push_interval', 60),
                 'server_node_report_min_traffic' => config('v2board.server_node_report_min_traffic', 0),
                 'server_device_online_min_traffic' => config('v2board.server_device_online_min_traffic', 0),
-                'device_limit_mode' => config('v2board.device_limit_mode', 0)
+                'device_limit_mode' => config('v2board.device_limit_mode', 0),
+                'server_status_report_hour' => (int)config('v2board.server_status_report_hour', 0)
             ],
             'email' => [
                 'email_template' => config('v2board.email_template', 'default'),

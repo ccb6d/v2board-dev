@@ -60,6 +60,7 @@ class ConfigSave extends FormRequest
         'device_limit_mode' => 'in:0,1',
         'server_node_report_min_traffic' => 'integer', 
         'server_device_online_min_traffic' => 'integer', 
+        'server_status_report_hour' => 'integer',
         // frontend
         'frontend_theme' => '',
         'frontend_theme_sidebar' => 'nullable|in:dark,light',

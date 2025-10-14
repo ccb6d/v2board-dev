@@ -57,6 +57,7 @@ class CheckServer extends Command
         $servers = $serverService->getAllServers();
         foreach ($servers as $server) {
             if ($server['parent_id']) continue;
+            if (!$server['show']) continue; // 过滤掉 show=0 的节点
 
             // 检查节点是否掉线 (超过300秒未更新)
             $isOffline = $server['last_check_at'] && (time() - $server['last_check_at']) > 300;
@@ -97,6 +98,13 @@ class CheckServer extends Command
 
     private function sendServerReport()
     {
+        // 检查是否启用节点状态报告
+        $reportEnabled = (int)config('v2board.server_status_report_hour', 1);
+        if ($reportEnabled === 0) {
+            // 如果设置为0，则不发送报告
+            return;
+        }
+
         $serverService = new ServerService();
         $servers = $serverService->getAllServers();
 
@@ -108,6 +116,7 @@ class CheckServer extends Command
 
         foreach ($servers as $server) {
             if ($server['parent_id']) continue;
+            if (!$server['show']) continue; // 过滤掉 show=0 的节点
 
             $totalServers++;
             // 检查节点是否在线 (超过300秒未更新则认为掉线)
