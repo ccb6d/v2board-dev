@@ -105,6 +105,20 @@ class CheckServer extends Command
             return;
         }
 
+        // 计算报告发送间隔（小时转换为秒）
+        $reportInterval = $reportEnabled * 3600;
+        
+        // 使用缓存键记录上次发送报告的时间
+        $lastReportKey = CacheKey::get('SERVER_STATUS_LAST_REPORT_TIME', null);
+        $lastReportTime = Cache::get($lastReportKey, 0);
+        $currentTime = time();
+
+        // 检查是否达到发送间隔
+        if (($currentTime - $lastReportTime) < $reportInterval) {
+            // 未达到发送间隔，跳过发送
+            return;
+        }
+
         $serverService = new ServerService();
         $servers = $serverService->getAllServers();
 
@@ -152,5 +166,8 @@ class CheckServer extends Command
         // 发送报告给管理员
         $telegramService = new TelegramService();
         $telegramService->sendMessageWithAdmin($message);
+        
+        // 更新最后发送报告的时间
+        Cache::put($lastReportKey, $currentTime, $reportInterval * 2); // 缓存时间设为报告间隔的两倍，确保记录不会提前过期
     }
 }
