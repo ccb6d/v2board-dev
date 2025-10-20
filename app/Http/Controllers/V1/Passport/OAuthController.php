@@ -78,9 +78,7 @@ class OAuthController extends Controller
 
             // --- 固定 Google Redirect URI (回调地址) ---
             // *** 这个是关键：必须是在 Google Cloud Console 中注册的那个固定的后端回调地址 ***
-            // 优先使用前端传的 redirect，否则 fallback 到默认后端 callback
-            $googleCallbackUri = $frontendRedirectUrl ?: url('/api/v1/passport/oauth/google/callback');
-
+            $googleCallbackUri = url('/api/v1/passport/oauth/google/callback');
 
             // --- 将 redirect URL 编码并作为 state 参数传递 ---
             $encodedRedirectUrl = base64url_encode($frontendRedirectUrl);
@@ -191,7 +189,7 @@ class OAuthController extends Controller
                         'code' => $authorizationCode,
                         'grant_type' => 'authorization_code',
                         // *** 再次强调：必须使用与请求时完全一致的 redirect_uri ***
-                        'redirect_uri' => $frontendCallbackUrl ?: url('/api/v1/passport/oauth/google/callback'),
+                        'redirect_uri' => url('/api/v1/passport/oauth/google/callback'),
                     ]
                 ]);
                 $tokenData = json_decode($tokenResponse->getBody(), true);
