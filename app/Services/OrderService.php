@@ -6,6 +6,9 @@ use App\Jobs\OrderHandleJob;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
+use App\Models\Payment;
+use App\Utils\CacheKey;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Services\OrderNotifyService;
 
@@ -100,6 +103,8 @@ class OrderService
         }
 
         DB::commit();
+        // 发送订单完成邮件
+        $this->sendOrderCompleteEmail($order, $this->user, $plan);
     }
 
 
@@ -200,6 +205,14 @@ class OrderService
         $order->surplus_amount = max($result, 0);
         $orderModel = Order::where('user_id', $user->id)->where('period', '!=', 'reset_price')->where('status', 3);
         $order->surplus_order_ids = array_column($orderModel->get()->toArray(), 'id');
+    }
+
+    private function orderIsUsed(Order $order):bool
+    {
+        $month = self::STR_TO_TIME[$order->period];
+        $orderExpireDay = strtotime('+' . $month . ' month', $order->created_at);
+        if ($orderExpireDay < time()) return true;
+        return false;
     }
 
     private function getSurplusValueByPeriod(User $user, Order $order)
@@ -397,4 +410,17 @@ class OrderService
         }
         return $add;
     }
+
+    private function sendOrderCompleteEmail($order, $user, $plan)
+    {
+        // 获取支付方式信息
+        $payment = null;
+        if ($order->payment_id) {
+            $payment = Payment::find($order->payment_id);
+        }
+        // 发送邮件
+        $mailService = new MailService();
+        $mailService->orderComplete($order, $user, $plan, $payment);
+    }
+    
 }
