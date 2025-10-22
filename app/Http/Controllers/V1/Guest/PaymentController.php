@@ -139,8 +139,8 @@ class PaymentController extends Controller
             number_format($todayIncome / 100, 2)
         );
 
-        $telegramService = new TelegramService();
-        $telegramService->sendMessageWithAdmin($message);
+        //$telegramService = new TelegramService();
+        //$telegramService->sendMessageWithAdmin($message);
     }
 
     /**
