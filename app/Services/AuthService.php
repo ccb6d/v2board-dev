@@ -19,6 +19,39 @@ class AuthService
         $this->user = $user;
     }
 
+    private static function realIp(Request $request)
+    {
+        $candidates = [];
+    
+        // 优先 Cloudflare
+        $cf = $request->headers->get('CF-Connecting-IP');
+        if ($cf) $candidates[] = $cf;
+    
+        // 然后 X-Forwarded-For（取链路中的第一个）
+        $xff = $request->headers->get('X-Forwarded-For');
+        if ($xff) {
+            foreach (explode(',', $xff) as $part) {
+                $part = trim($part);
+                if ($part !== '') $candidates[] = $part;
+            }
+        }
+    
+        // 再尝试 X-Real-IP
+        $xri = $request->headers->get('X-Real-IP');
+        if ($xri) $candidates[] = $xri;
+    
+        // 兜底
+        $remote = $request->server->get('REMOTE_ADDR');
+        if ($remote) $candidates[] = $remote;
+    
+        foreach ($candidates as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+        return $request->ip();
+    }    
+
     public function generateAuthData(Request $request)
     {
         $guid = Helper::guid();
@@ -31,7 +64,7 @@ class AuthService
         $isTelegramLogin = $request->header('X-Telegram-Login') === 'true';
         
         self::addSession($this->user->id, $guid, [
-            'ip' => $isTelegramLogin ? 'Telegram登录' : ($request->ip() ?: '未知IP'),
+            'ip' => $isTelegramLogin ? 'Telegram登录' : ($this->realIp($request) ?: '未知IP'),
             'login_at' => time(),
             'ua' => $request->userAgent() ?: ($isTelegramLogin ? 'Telegram Bot' : '未知设备'),
             'auth_data' => $authData
