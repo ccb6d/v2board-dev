@@ -14,7 +14,7 @@ class OrderNotifyService
     public function notify(Order $order): void
     {
         // type
-        $types = [1 => "新购", 2 => "续费", 3 => "变更", 4 => "流量包",5 => "兑换",6 => "推广赠送"];
+        $types = [1 => "新购", 2 => "续费", 3 => "变更", 4 => "流量包",5 => "兑换",6 => "推广赠送",9 => "余额充值"];
         $type = $types[$order->type] ?? "未知";
 
         // planName
