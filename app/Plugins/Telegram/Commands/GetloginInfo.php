@@ -175,6 +175,7 @@ class GetLoginInfo extends Telegram
 
     /**
      * 获取IP地理位置信息
+     * 使用多个API源以提高准确性和可靠性
      */
     private function getIpLocation($ip)
     {
@@ -182,43 +183,94 @@ class GetLoginInfo extends Telegram
             return '-';
         }
 
+        // 设置超时时间，避免请求过长
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 3, // 3秒超时
+                'user_agent' => 'Mozilla/5.0'
+            ]
+        ]);
+
+        // 尝试使用 ipinfo.io (免费，准确度高，每月50000次请求)
         try {
-            $api_url = "http://ip-api.com/json/{$ip}?fields=520191&lang=zh-CN";
-            
-            // 设置超时时间，避免请求过长
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => 3 // 3秒超时
-                ]
-            ]);
-            
+            $api_url = "https://ipinfo.io/{$ip}/json";
             $response = @file_get_contents($api_url, false, $context);
             
-            if ($response === false) {
-                return '-';
-            }
-            
-            $location_data = json_decode($response, true);
-            
-            if ($location_data && isset($location_data['status']) && $location_data['status'] === 'success') {
-                // 优先使用城市，如果没有则使用地区
-                $city = $location_data['city'] ?? '';
-                $regionName = $location_data['regionName'] ?? '';
-                $country = $location_data['country'] ?? '';
+            if ($response !== false) {
+                $location_data = json_decode($response, true);
                 
-                if (!empty($city)) {
-                    return $city;
-                } elseif (!empty($regionName)) {
-                    return $regionName;
-                } elseif (!empty($country)) {
-                    return $country;
+                if ($location_data && !isset($location_data['error']) && isset($location_data['city'])) {
+                    // ipinfo.io 返回格式：city, region, country
+                    $city = $location_data['city'] ?? '';
+                    $region = $location_data['region'] ?? '';
+                    $country = $location_data['country'] ?? '';
+                    
+                    if (!empty($city)) {
+                        return $city;
+                    } elseif (!empty($region)) {
+                        return $region;
+                    } elseif (!empty($country)) {
+                        return $country;
+                    }
                 }
             }
-            
-            return '-';
         } catch (\Exception $e) {
-            return '-';
+            // 继续尝试下一个API
         }
+
+        // 备用API 1: ipapi.co (免费，准确度高，每天1000次请求)
+        try {
+            $api_url = "https://ipapi.co/{$ip}/json/";
+            $response = @file_get_contents($api_url, false, $context);
+            
+            if ($response !== false) {
+                $location_data = json_decode($response, true);
+                
+                if ($location_data && !isset($location_data['error'])) {
+                    $city = $location_data['city'] ?? '';
+                    $region = $location_data['region'] ?? '';
+                    $country = $location_data['country_name'] ?? '';
+                    
+                    if (!empty($city)) {
+                        return $city;
+                    } elseif (!empty($region)) {
+                        return $region;
+                    } elseif (!empty($country)) {
+                        return $country;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // 继续尝试下一个API
+        }
+
+        // 备用API 2: ip.sb (简单快速)
+        try {
+            $api_url = "https://api.ip.sb/geoip/{$ip}";
+            $response = @file_get_contents($api_url, false, $context);
+            
+            if ($response !== false) {
+                $location_data = json_decode($response, true);
+                
+                if ($location_data && !isset($location_data['error'])) {
+                    $city = $location_data['city'] ?? '';
+                    $region = $location_data['region'] ?? '';
+                    $country = $location_data['country'] ?? '';
+                    
+                    if (!empty($city)) {
+                        return $city;
+                    } elseif (!empty($region)) {
+                        return $region;
+                    } elseif (!empty($country)) {
+                        return $country;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // 所有API都失败
+        }
+
+        return '-';
     }
 }
 
