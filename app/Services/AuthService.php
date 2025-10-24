@@ -63,9 +63,18 @@ class AuthService
         // 检查是否是 Telegram 登录（通过请求头判断）
         $isTelegramLogin = $request->header('X-Telegram-Login') === 'true';
         
+        // 获取登录IP和时间
+        $loginIp = $isTelegramLogin ? 'Telegram_login' : ($this->realIp($request) ?: '未知IP');
+        $loginTime = time();
+        
+        // 更新用户的最后登录IP和时间到数据库
+        $this->user->last_login_ip = $loginIp;
+        $this->user->last_login_at = $loginTime;
+        $this->user->save();
+        
         self::addSession($this->user->id, $guid, [
             'ip' => $isTelegramLogin ? 'Telegram登录' : ($this->realIp($request) ?: '未知IP'),
-            'login_at' => time(),
+            'login_at' => $loginTime,
             'ua' => $request->userAgent() ?: ($isTelegramLogin ? 'Telegram Bot' : '未知设备'),
             'auth_data' => $authData
         ]);

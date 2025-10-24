@@ -856,3 +856,7 @@ CREATE TABLE `v2_server_v2node` (
 
 ALTER TABLE `v2_server_route`
 CHANGE `action_value` `action_value` text NULL AFTER `action`;
+
+-- 修改 last_login_ip 字段类型以支持存储 Telegram_login 等字符串
+ALTER TABLE `v2_user`
+MODIFY `last_login_ip` varchar(64) DEFAULT NULL COMMENT '最后登录IP';
