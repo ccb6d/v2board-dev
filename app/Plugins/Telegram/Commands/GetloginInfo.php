@@ -69,8 +69,8 @@ class GetLoginInfo extends Telegram
         
         // 添加表格
         $text .= "```\n";
-        $text .= "序号 用户邮箱              登录时间      登录IP\n";
-        $text .= str_repeat("=", 56) . "\n";
+        $text .= "序号 用户邮箱            登录时间      登录IP          地理位置\n";
+        $text .= str_repeat("=", 70) . "\n";
         
         // 添加登录记录
         foreach ($recentLogins as $index => $login) {
@@ -80,31 +80,45 @@ class GetLoginInfo extends Telegram
             // 格式化邮箱（处理长度，支持中英文）
             $email = $login->email;
             $emailLen = $this->getStringDisplayLength($email);
-            if ($emailLen > 20) {
-                $email = $this->truncateString($email, 17) . '...';
-                $emailLen = 20;
+            if ($emailLen > 18) {
+                $email = $this->truncateString($email, 15) . '...';
+                $emailLen = 18;
             }
-            $emailPadding = str_repeat(' ', 20 - $emailLen);
+            $emailPadding = str_repeat(' ', 18 - $emailLen);
             
             // 格式化IP（如果是Telegram登录则显示特殊标识）
             $ip = $login->last_login_ip ?? '未知';
+            $isTelegramLogin = false;
             if ($ip === 'Telegram_login') {
                 $ip = 'TG_Login';
+                $isTelegramLogin = true;
             } elseif (strlen($ip) > 15) {
                 $ip = substr($ip, 0, 13) . '..';
             }
+            $ipPadding = str_repeat(' ', 15 - strlen($ip));
             
-            $text .= sprintf("%4d %s%s %s  %s\n", 
+            // 获取地理位置
+            $location = '-';
+            if (!$isTelegramLogin && $login->last_login_ip && $login->last_login_ip !== '未知') {
+                $locationInfo = $this->getIpLocation($login->last_login_ip);
+                if ($locationInfo) {
+                    $location = $locationInfo;
+                }
+            }
+            
+            $text .= sprintf("%4d %s%s %s  %s%s %s\n", 
                 $index + 1,
                 $email,
                 $emailPadding,
                 $loginTime,
-                $ip
+                $ip,
+                $ipPadding,
+                $location
             );
             
             // 每15条添加一个分隔线
             if (($index + 1) % 15 === 0 && $index + 1 < $totalCount) {
-                $text .= str_repeat("-", 56) . "\n";
+                $text .= str_repeat("-", 70) . "\n";
             }
         }
         
@@ -157,6 +171,54 @@ class GetLoginInfo extends Telegram
         }
         
         return $result;
+    }
+
+    /**
+     * 获取IP地理位置信息
+     */
+    private function getIpLocation($ip)
+    {
+        if (empty($ip) || $ip === '未知' || $ip === 'Telegram_login') {
+            return '-';
+        }
+
+        try {
+            $api_url = "http://ip-api.com/json/{$ip}?fields=520191&lang=zh-CN";
+            
+            // 设置超时时间，避免请求过长
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 3 // 3秒超时
+                ]
+            ]);
+            
+            $response = @file_get_contents($api_url, false, $context);
+            
+            if ($response === false) {
+                return '-';
+            }
+            
+            $location_data = json_decode($response, true);
+            
+            if ($location_data && isset($location_data['status']) && $location_data['status'] === 'success') {
+                // 优先使用城市，如果没有则使用地区
+                $city = $location_data['city'] ?? '';
+                $regionName = $location_data['regionName'] ?? '';
+                $country = $location_data['country'] ?? '';
+                
+                if (!empty($city)) {
+                    return $city;
+                } elseif (!empty($regionName)) {
+                    return $regionName;
+                } elseif (!empty($country)) {
+                    return $country;
+                }
+            }
+            
+            return '-';
+        } catch (\Exception $e) {
+            return '-';
+        }
     }
 }
 
